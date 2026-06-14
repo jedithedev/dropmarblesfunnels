@@ -1,29 +1,16 @@
 from flask import Flask, request, jsonify
 from discord_webhook import DiscordWebhook, DiscordEmbed
-import json
+from supabase import create_client
 import os
-from datetime import datetime
 
 app = Flask(__name__)
 
 WEBHOOK_URL = "https://discord.com/api/webhooks/1515732660230684914/h8cp8cvh0h5XoK-sgAnMihZpySTIbiPl2fcNVRYypAEJd9dS9GnfTfDU_31eMPmnEZuU"
-FUNNELS_FILE = "/tmp/funnels.json"
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-def load_funnels():
-    if not os.path.exists(FUNNELS_FILE):
-        return []
-
-    with open(FUNNELS_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
-
-
-def save_funnels(data):
-    with open(FUNNELS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 @app.route("/funnel", methods=["POST"])
@@ -37,16 +24,11 @@ def funnel():
     if step is None or user_id is None or username is None:
         return jsonify({"success": False, "error": "missing fields"}), 400
 
-    entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+    supabase.table("funnels").insert({
         "step": step,
         "user_id": user_id,
         "username": username
-    }
-
-    funnels = load_funnels()
-    funnels.append(entry)
-    save_funnels(funnels)
+    }).execute()
 
     webhook = DiscordWebhook(url=WEBHOOK_URL)
 
@@ -63,3 +45,7 @@ def funnel():
     webhook.execute()
 
     return jsonify({"success": True})
+
+
+if __name__ == "__main__":
+    app.run()
