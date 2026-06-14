@@ -7,7 +7,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 WEBHOOK_URL = "https://discord.com/api/webhooks/1515732660230684914/h8cp8cvh0h5XoK-sgAnMihZpySTIbiPl2fcNVRYypAEJd9dS9GnfTfDU_31eMPmnEZuU"
-FUNNELS_FILE = "funnels.json"
+FUNNELS_FILE = "/tmp/funnels.json"
 
 
 def load_funnels():
@@ -35,10 +35,7 @@ def funnel():
     username = data.get("username")
 
     if step is None or user_id is None or username is None:
-        return jsonify({
-            "success": False,
-            "error": "step, user_id, and username are required"
-        }), 400
+        return jsonify({"success": False, "error": "missing fields"}), 400
 
     entry = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -65,10 +62,4 @@ def funnel():
     webhook.add_embed(embed)
     webhook.execute()
 
-    return jsonify({
-        "success": True
-    })
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    return jsonify({"success": True})
